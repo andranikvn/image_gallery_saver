@@ -1,8 +1,11 @@
 package com.example.imagegallerysaver
 
+import android.Manifest
+import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -21,6 +24,7 @@ import java.io.FileInputStream
 import java.io.IOException
 import android.text.TextUtils
 import android.webkit.MimeTypeMap
+import androidx.core.app.ActivityCompat
 
 
 class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
@@ -87,6 +91,13 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
         }
     }
 
+
+    private fun isWritePermissionGranted(): Boolean {
+        return PackageManager.PERMISSION_GRANTED ==
+                ActivityCompat.checkSelfPermission(
+                    applicationContext!!, Manifest.permission.WRITE_EXTERNAL_STORAGE
+                )
+    }
     private fun getMIMEType(extension: String): String? {
         var type: String? = null;
         if (!TextUtils.isEmpty(extension)) {
@@ -115,24 +126,38 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
     private fun saveFileToGallery(filePath: String, name: String?): HashMap<String, Any?> {
         val context = applicationContext
         return try {
-            val originalFile = File(filePath)
-            val fileUri = generateUri(originalFile.extension, name)
+            if(isWritePermissionGranted() || android.os.Build.VERSION.SDK_INT >= 29){
+                val originalFile = File(filePath)
+                val fileUri = generateUri(originalFile.extension, name)
 
-            val outputStream = context?.contentResolver?.openOutputStream(fileUri)!!
-            val fileInputStream = FileInputStream(originalFile)
+                val outputStream = context?.contentResolver?.openOutputStream(fileUri)!!
+                val fileInputStream = FileInputStream(originalFile)
 
-            val buffer = ByteArray(10240)
-            var count = 0
-            while (fileInputStream.read(buffer).also { count = it } > 0) {
-                outputStream.write(buffer, 0, count)
+                val buffer = ByteArray(10240)
+                var count = 0
+                while (fileInputStream.read(buffer).also { count = it } > 0) {
+                    outputStream.write(buffer, 0, count)
+                }
+
+                outputStream.flush()
+                outputStream.close()
+                fileInputStream.close()
+
+                context!!.sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, fileUri))
+                SaveResultModel(
+                    fileUri.toString().isNotEmpty(),
+                    fileUri.toString(),
+                    null
+                ).toHashMap()
+            } else {
+                ActivityCompat.requestPermissions(
+                    applicationContext as Activity,
+                    arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                    2408
+                )
+                SaveResultModel(false, null, "e.toString()").toHashMap()
+
             }
-
-            outputStream.flush()
-            outputStream.close()
-            fileInputStream.close()
-
-            context!!.sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, fileUri))
-            SaveResultModel(fileUri.toString().isNotEmpty(), fileUri.toString(), null).toHashMap()
         } catch (e: IOException) {
             SaveResultModel(false, null, e.toString()).toHashMap()
         }
