@@ -120,7 +120,7 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
                 bmp.recycle()
                 SaveResultModel(fileUri.toString().isNotEmpty(), fileUri.toString(), null).toHashMap()
             } else {
-                SaveResultModel(false, null, "e.toString()).toHashMap()"
+                SaveResultModel(false, null, "e.toString()").toHashMap()
 
             }
         } catch (e: IOException) {
