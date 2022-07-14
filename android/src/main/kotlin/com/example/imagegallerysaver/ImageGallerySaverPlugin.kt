@@ -110,14 +110,19 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
         val context = applicationContext
         val fileUri = generateUri("jpg", name = name)
         return try {
-            val fos = context?.contentResolver?.openOutputStream(fileUri)!!
-            println("ImageGallerySaverPlugin $quality")
-            bmp.compress(Bitmap.CompressFormat.JPEG, quality, fos)
-            fos.flush()
-            fos.close()
-            context!!.sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, fileUri))
-            bmp.recycle()
-            SaveResultModel(fileUri.toString().isNotEmpty(), fileUri.toString(), null).toHashMap()
+            if(isWritePermissionGranted() || android.os.Build.VERSION.SDK_INT >= 29) {
+                val fos = context?.contentResolver?.openOutputStream(fileUri)!!
+                println("ImageGallerySaverPlugin $quality")
+                bmp.compress(Bitmap.CompressFormat.JPEG, quality, fos)
+                fos.flush()
+                fos.close()
+                context!!.sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, fileUri))
+                bmp.recycle()
+                SaveResultModel(fileUri.toString().isNotEmpty(), fileUri.toString(), null).toHashMap()
+            } else {
+                SaveResultModel(false, null, "e.toString()).toHashMap()"
+
+            }
         } catch (e: IOException) {
             SaveResultModel(false, null, e.toString()).toHashMap()
         }
