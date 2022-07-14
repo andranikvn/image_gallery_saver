@@ -93,6 +93,10 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
 
 
     private fun isWritePermissionGranted(): Boolean {
+        println(PackageManager.PERMISSION_GRANTED ==
+                ActivityCompat.checkSelfPermission(
+                    applicationContext!!, Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ))
         return PackageManager.PERMISSION_GRANTED ==
                 ActivityCompat.checkSelfPermission(
                     applicationContext!!, Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -176,6 +180,18 @@ class ImageGallerySaverPlugin : FlutterPlugin, MethodCallHandler {
         applicationContext = null
         methodChannel!!.setMethodCallHandler(null);
         methodChannel = null;
+    }
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<String>, grantResults: IntArray
+    ): Boolean {
+        if (requestCode == 2408) {
+            val permissionGranted = grantResults.isNotEmpty()
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            println(" permission granted")
+
+            return true
+        }
+        return false
     }
 
     private fun onAttachedToEngine(applicationContext: Context, messenger: BinaryMessenger) {
